@@ -8,5 +8,4 @@ export interface ApiResponse{
     //Handling the multiple messages that are been collected and it is made optional
     //as we will not get multiple messages always
     messages?:Array<Message>
-
 }
