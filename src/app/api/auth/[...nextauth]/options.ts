@@ -51,8 +51,11 @@ export const authOptions:NextAuthOptions={
             token.isAcceptingMessages = user.isAcceptingMessages;
             token.username = user.username;
           }
+          console.log(token)
           return token;
+         
         },
+        
         async session({ session, token }) {
           if (token) {
             session.user._id = token._id;
@@ -63,6 +66,7 @@ export const authOptions:NextAuthOptions={
           return session;
         },
       },
+     
       session: {
         strategy: 'jwt',
       },
@@ -70,4 +74,5 @@ export const authOptions:NextAuthOptions={
       pages: {
         signIn: '/sign-in',
       },
+      
 }
