@@ -6,42 +6,54 @@ import { User } from "next-auth";
 import mongoose from "mongoose";
 
 export async function GET (request:Request){
-    await dbConnect();
-    const session=await getServerSession(authOptions)
-    const user:User=session?.user;
-    if(!session||!session.user){
-        return Response.json({
-            success:false,
-            message:"user is not authenticated"
-        },{status:400})
-    }
-    const userId=new mongoose.Types.ObjectId(user._id)
-    try{
-        const user = await userModel.aggregate([
+    try {
+        await dbConnect();
+        const session=await getServerSession(authOptions)
+        console.log('[GET-MESSAGES] Session:', session);
+        
+        const user:User=session?.user;
+        if(!session||!session.user){
+            console.log('[GET-MESSAGES] No session or user found');
+            return Response.json({
+                success:false,
+                message:"user is not authenticated"
+            },{status:401})
+        }
+        
+        const userId=new mongoose.Types.ObjectId(user._id)
+        console.log('[GET-MESSAGES] User ID:', userId);
+        
+        const userData = await userModel.aggregate([
             { $match: { _id: userId } },
             { $unwind: '$messages' },
             { $sort: { 'messages.createdAt': -1 } },
             { $group: { _id: '$_id', messages: { $push: '$messages' } } },
           ]).exec();
-          if(!user||user.length==0){
+          
+          console.log('[GET-MESSAGES] User data from DB:', userData);
+          
+          if(!userData||userData.length==0){
+            console.log('[GET-MESSAGES] No user found in database');
             return Response.json({
-                success:false,
-                message:"user is not found"
-            },{status:400})
+                success:true,
+                messages:[]
+            },{status:200})
           }
+          
+          const messages = userData[0].messages || [];
+          console.log('[GET-MESSAGES] Returning messages:', messages);
+          
           return Response.json({
-            success:false,
-            message:user[0].messages
+            success:true,
+            messages: messages
           },{status:200})
-      
 
     }
     catch(error){
-        console.log(error)
+        console.error('[GET-MESSAGES] Error:', error)
         return Response.json({
             success:false,
-            message:"error"
-            
-        },{status:400})
+            message:"Internal server error"
+        },{status:500})
     }
 }

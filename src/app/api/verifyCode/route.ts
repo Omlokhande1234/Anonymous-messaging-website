@@ -28,8 +28,8 @@ export async function POST(request:Request){
         if(!isVerifyCode){
             return Response.json({
                 success:false,
-                message:"Invalid code or the co"
-            })
+                message:"Invalid code or the code has expired"
+            },{status:400})
         }
         else if(!isVerifyCodeExpiry){
             return Response.json({

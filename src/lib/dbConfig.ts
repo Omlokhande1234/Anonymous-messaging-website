@@ -31,7 +31,7 @@ async function dbConnect():Promise<void> {
     }
     //If the database is not connected then we will connect it
     try{
-        const db=await mongoose.connect(process.env.MONGO_URL||'',{})
+        const db=await mongoose.connect(process.env.MONGO_URI||'',{})
         //Here we have taken the readystate from db connections as our connection object
         //created above has return type number and ready state is number instead of number
         //we can also take boolean value
