@@ -140,13 +140,13 @@ export default function Home() {
             Unlock honest feedback through anonymous messaging. Built with modern web technologies to showcase full-stack development skills.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-            <Link href="/auth/signup">
+            <Link href="/auth/signin">
               <Button size="lg" className="bg-black hover:bg-gray-800 text-white px-8 py-4 text-lg rounded-xl">
                 Start Messaging
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
-            <Link href="/send">
+            <Link href="/auth/signin">
               <Button variant="outline" size="lg" className="border-gray-300 text-black hover:bg-gray-100 px-8 py-4 text-lg rounded-xl">
                 Send Anonymous Message
               </Button>

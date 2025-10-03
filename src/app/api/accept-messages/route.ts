@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/options";
 import dbConnect from "@/lib/dbConfig";
 import userModel from "@/models/userModel";
+import mongoose from "mongoose";
 
 export async function POST(request: Request) {
     await dbConnect();
@@ -29,9 +30,33 @@ export async function POST(request: Request) {
         
         console.log("Toggling acceptMessages to:", acceptMessages);
         console.log("For user ID:", userId);
+        console.log("Session user:", session.user);
+        console.log("User ID type:", typeof userId);
+
+        // Validate userId before converting to ObjectId
+        if (!userId || typeof userId !== 'string') {
+            console.error("Invalid user ID:", userId);
+            return Response.json({
+                success: false,
+                message: "Invalid user ID in session"
+            }, { status: 400 });
+        }
+
+        // Check if userId is a valid ObjectId string
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            console.error("User ID is not a valid ObjectId:", userId);
+            return Response.json({
+                success: false,
+                message: "Invalid user ID format"
+            }, { status: 400 });
+        }
+
+        // Convert string ID to ObjectId
+        const objectId = new mongoose.Types.ObjectId(userId);
+        console.log("Converted ObjectId:", objectId);
 
         const updatedUser = await userModel.findByIdAndUpdate(
-            userId,
+            objectId,
             { isAcceptingmessage: acceptMessages },
             { new: true }
         );
@@ -82,7 +107,31 @@ export async function GET(request: Request) {
     }
 
     try {
-        const foundUser = await userModel.findById(userId);
+        console.log("GET - User ID:", userId);
+        console.log("GET - User ID type:", typeof userId);
+
+        // Validate userId before converting to ObjectId
+        if (!userId || typeof userId !== 'string') {
+            console.error("GET - Invalid user ID:", userId);
+            return Response.json({
+                success: false,
+                message: "Invalid user ID in session"
+            }, { status: 400 });
+        }
+
+        // Check if userId is a valid ObjectId string
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            console.error("GET - User ID is not a valid ObjectId:", userId);
+            return Response.json({
+                success: false,
+                message: "Invalid user ID format"
+            }, { status: 400 });
+        }
+
+        // Convert string ID to ObjectId
+        const objectId = new mongoose.Types.ObjectId(userId);
+        console.log("GET - Converted ObjectId:", objectId);
+        const foundUser = await userModel.findById(objectId);
 
         if (!foundUser) {
             return Response.json({

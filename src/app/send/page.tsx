@@ -118,7 +118,7 @@ function SendMessageInner() {
                 </Button>
               </Link>
               <Button
-                onClick={() => router.push('/signout')}
+                onClick={() => router.push('/auth/signout')}
                 variant="outline"
                 className="border-gray-300 text-black hover:bg-gray-100"
               >
@@ -161,7 +161,7 @@ function SendMessageInner() {
                 </Button>
               </Link>
               <Button
-                onClick={() => router.push('/signout')}
+                onClick={() => router.push('/auth/signout')}
                 variant="outline"
                 className="w-full justify-center border-gray-300 text-black hover:bg-gray-100"
               >

@@ -110,8 +110,13 @@ export default function Dashboard() {
       
       console.log('[DASHBOARD] Toggle response:', response.data);
       
-      // Update local state
-      setIsAcceptingMessages(!isAcceptingMessages);
+      // Update local state with the value from the server
+      if (response.data.success) {
+        setIsAcceptingMessages(response.data.isAcceptingmessage);
+      } else {
+        // If server response failed, revert the toggle
+        setIsAcceptingMessages(isAcceptingMessages);
+      }
       
       toast({
         title: "Settings Updated",
