@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { MessageCircle, Send, Sparkles, User, MessageSquare, Wand2, RefreshCw, Menu, X } from "lucide-react";
+import { MessageCircle, Send, Sparkles, User, MessageSquare, Wand2, RefreshCw, Menu, X, Search, Check } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
@@ -23,6 +23,15 @@ function SendMessageInner() {
   const [aiSuggestion, setAiSuggestion] = useState("");
   const [suggestionPrompt, setSuggestionPrompt] = useState("");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  
+  // Search functionality states
+  const [searchResults, setSearchResults] = useState<{username: string}[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const { data: session, status } = useSession();
@@ -34,6 +43,112 @@ function SendMessageInner() {
       setUsername(toParam);
     }
   }, [searchParams]);
+
+  // Search users function
+  const searchUsers = async (query: string) => {
+    if (query.length < 2) {
+      setSearchResults([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    console.log('[FRONTEND] Searching for:', query);
+    setIsSearching(true);
+    try {
+      const response = await axios.get(`/api/search-users?q=${encodeURIComponent(query)}`);
+      console.log('[FRONTEND] Search response:', response.data);
+      
+      if (response.data.success) {
+        setSearchResults(response.data.users);
+        setShowSuggestions(true);
+        console.log('[FRONTEND] Found users:', response.data.users);
+      } else {
+        console.log('[FRONTEND] Search failed:', response.data.message);
+        setSearchResults([]);
+        setShowSuggestions(false);
+      }
+    } catch (error) {
+      console.error('[FRONTEND] Search error:', error);
+      setSearchResults([]);
+      setShowSuggestions(false);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Handle username input change with debounced search
+  const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setUsername(value);
+    setSelectedIndex(-1); // Reset selection when typing
+
+    // Clear previous timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    // Set new timeout for search
+    searchTimeoutRef.current = setTimeout(() => {
+      searchUsers(value);
+    }, 300);
+  };
+
+  // Handle keyboard navigation
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showSuggestions || searchResults.length === 0) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedIndex(prev => 
+          prev < searchResults.length - 1 ? prev + 1 : 0
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedIndex(prev => 
+          prev > 0 ? prev - 1 : searchResults.length - 1
+        );
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (selectedIndex >= 0 && selectedIndex < searchResults.length) {
+          handleSuggestionSelect(searchResults[selectedIndex].username);
+        }
+        break;
+      case 'Escape':
+        setShowSuggestions(false);
+        setSelectedIndex(-1);
+        break;
+    }
+  };
+
+  // Handle suggestion selection
+  const handleSuggestionSelect = (selectedUsername: string) => {
+    console.log('Selecting username:', selectedUsername);
+    setUsername(selectedUsername);
+    setShowSuggestions(false);
+    setSearchResults([]);
+    
+    // Focus back to input after selection
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  };
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (inputRef.current && !inputRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -205,20 +320,64 @@ function SendMessageInner() {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Username Field */}
-                <div className="space-y-2">
+                {/* Username Field with Search */}
+                <div className="space-y-2 relative">
                   <Label htmlFor="username" className="text-black flex items-center space-x-2">
                     <User className="h-4 w-4" />
                     <span>Recipient Username</span>
                   </Label>
-                  <Input
-                    id="username"
-                    type="text"
-                    placeholder="Enter the username to send message to"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="bg-white border-gray-300 text-black placeholder:text-gray-500 focus:border-black focus:ring-black"
-                  />
+                  <div className="relative">
+                    <Input
+                      ref={inputRef}
+                      id="username"
+                      type="text"
+                      placeholder="Search for a username..."
+                      value={username}
+                      onChange={handleUsernameChange}
+                      onKeyDown={handleKeyDown}
+                      className="bg-white border-gray-300 text-black placeholder:text-gray-500 focus:border-black focus:ring-black pr-10"
+                    />
+                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                      {isSearching ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
+                      ) : (
+                        <Search className="h-4 w-4 text-gray-400" />
+                      )}
+                    </div>
+                    
+                    {/* Search Suggestions Dropdown */}
+                    {showSuggestions && searchResults.length > 0 && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                        {searchResults.map((user, index) => (
+                          <button
+                            key={index}
+                            type="button"
+                            onClick={() => handleSuggestionSelect(user.username)}
+                            className={`w-full px-4 py-3 text-left flex items-center justify-between text-black border-b border-gray-100 last:border-b-0 transition-colors cursor-pointer ${
+                              selectedIndex === index 
+                                ? 'bg-blue-50 border-blue-200' 
+                                : 'hover:bg-gray-100'
+                            }`}
+                          >
+                            <span className="flex items-center space-x-3">
+                              <User className="h-4 w-4 text-gray-500" />
+                              <span className="font-medium">{user.username}</span>
+                            </span>
+                            <Check className="h-4 w-4 text-green-500" />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {/* No results message */}
+                    {showSuggestions && searchResults.length === 0 && username.length >= 2 && !isSearching && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg">
+                        <div className="px-4 py-2 text-gray-500 text-sm">
+                          {`No users found matching "${username}"`}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Message Field */}
